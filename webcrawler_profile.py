@@ -3,19 +3,21 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import time
 import csv
+from random import randint
+from webdriver_manager.chrome import ChromeDriverManager
 
 from bs4 import BeautifulSoup
 
-driver = webdriver.Chrome(executable_path='C:/Users/Admin/Downloads/chromedriver_win32/chromedriver.exe')
+driver = webdriver.Chrome(ChromeDriverManager().install())
 driver.maximize_window()
 # some example names from their company:
 # seven senders: "Johannes Plehn", "Thomas Hagemann", "Thorben Seiler", "Clemens Kress", "Martijn Kleij", "Steffen Heilmann"
 # airttable: "Howie Liu", "Andrew Ofstad", "Emmett Nicholas", "Archana Agrawal", "Peter Deng", "Raymond Endres", "Johanna Jackman,", "Seth Shaw", "Ambereen Toubassy"
-names = ["Blair LaCorte", "Luis Dussan", "Bob Brown", "Rick Tewell", "T.R. Ramachandran", "Stephen Lambright", "Andrew Hughes", "Brent Blanchard", "Jordan Greene"]
-company = "Aeye"
+names = []
+company = "Checkout.com"
 
 #headings for the csv file:
-headings = ["Profile URL", "Name", "Title", "About", "Experience", "Education", "Skills"]
+headings = ["Profile URL", "Name", "Company Name", "Title", "About", "Experience", "Education", "Skills"]
 #open csv file: this just writes the headings. New rows get edited further down
 with open('C:/Users/Admin/source/repos/webcrawler-profile/' + company + '.csv', 'w') as f:
     #create csv writer
@@ -25,14 +27,17 @@ with open('C:/Users/Admin/source/repos/webcrawler-profile/' + company + '.csv', 
 
 profile_links = []
 
-# this searches bing with the name and company and returns the most relevant link.
+# this searches bing with the name and company and returns the most relevant link. Comment this part out if using Craft.co instead
 # TODO: The most relevant link however is not always correct as they might not have a linked in profile, something else will be taken instead. But it doesnt happen often. Most have linkedin profiles.
+# "site:linkedin.com/in/ "
+# google: 
+'''
 for name in names:
-    query = "site:linkedin.com/in/ " + "AND " + name + " " + "AND " + company
+    query = "site:linkedin.com/in " + name + " " + company 
     print(query)
     url = f"https://bing.com/search?q={query}"
     driver.get(url)
-    time.sleep(2)
+    time.sleep(randint(5,30))
     
     #use this for all links on the bing page: "//a[@href]"
 
@@ -49,7 +54,26 @@ for name in names:
         #profile_links.append(link0)
 
 print(profile_links)
+'''
 
+#Using Craft.co to get leadership team but not board members. Comment this part out if using bing search
+craft_url = "https://craft.co/checkout-com/executives"
+driver.get(craft_url)
+time.sleep(3)
+craft_profiles_list = driver.find_element(By.CSS_SELECTOR, '._1MhMY')
+craft_profiles = craft_profiles_list.find_elements(By.TAG_NAME, 'li')
+for craft_profile in craft_profiles:
+    title_check = craft_profile.find_element(By.CSS_SELECTOR, 'div._3FhAT').text
+    print(title_check)
+    if 'Board' in title_check:
+        pass
+    else:
+        if craft_profile.find_elements(By.CSS_SELECTOR, 'a._6rb73'):
+            linkedin_link = craft_profile.find_elements(By.CSS_SELECTOR, 'a._6rb73')
+            linkedin_link0 = linkedin_link[0].get_attribute('href')
+            profile_links.append(linkedin_link0)
+            print(linkedin_link0)
+   
 
 #linkedin profile scrapper part:
 #Some Test profiles:
@@ -59,12 +83,12 @@ print(profile_links)
 #profile = 'https://www.linkedin.com/in/thhagemann'
 
 #fill in own linkedin account username and password
-linkedin_username = "username"
-linkedin_password = "password"
+linkedin_username = "**********"
+linkedin_password = "**********"
 
 #open linkedin login page
 driver.get('https://www.linkedin.com/login')
-
+time.sleep(randint(10,30))
 #Enter login info:
 username = driver.find_element_by_id('username')
 username.send_keys(linkedin_username)
@@ -73,11 +97,13 @@ password = driver.find_element_by_id('password')
 password.send_keys(linkedin_password)
 
 password.send_keys(Keys.RETURN)
-time.sleep(6)
+time.sleep(randint(10,80))
+
+#profile_links = ["https://www.linkedin.com/in/sebastian-siemiatkowski-768977", "https://www.linkedin.com/in/victorjacobsson/", "https://www.linkedin.com/in/knut-fr%C3%A4ngsmyr-5382a924/", "https://www.linkedin.com/in/davidfock", "https://www.linkedin.com/in/lukegriffiths1/", "https://www.linkedin.com/in/niclas-neglen-71b6a928/", "https://www.linkedin.com/in/linda-samlin-hoglund/", "https://www.linkedin.com/in/camilla-giesecke-78677812/", "https://www.linkedin.com/in/michaelmoritz", "https://www.linkedin.com/in/yaron-shaer-1938103/"]
 for profile in profile_links:
 
     driver.get(profile)
-    time.sleep(7)
+    time.sleep(randint(120,240))
 
     #to move forward and backward use driver.forward() driver.back()
 
@@ -96,14 +122,14 @@ for profile in profile_links:
             #if a show more button exists continue and click on the link, then scrape the new page that opened and then go back to the previous page.
             if section.find_elements_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid'):
                 section.find_element_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid').click()
-                time.sleep(6)
+                time.sleep(randint(10,30))
                 #Scroll all the way down
                 last_height = driver.execute_script("return document.body.scrollHeight")
                 while True:
                     #Scroll to bottom
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     # Wait to load page
-                    time.sleep(2)
+                    time.sleep(3)
                     # Calculate new scroll height and compare with last scroll height
                     new_height = driver.execute_script("return document.body.scrollHeight")
                     if new_height == last_height:
@@ -133,7 +159,7 @@ for profile in profile_links:
 
                 print("scrape experiences from site")
                 driver.execute_script("window.history.go(-1)")
-                time.sleep(7)
+                time.sleep(randint(10,30))
                 #leave the loop early since the data is already scraped
                 break
             else:
@@ -179,14 +205,14 @@ for profile in profile_links:
         if section.find_elements_by_id('education'):
             if section.find_elements_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid'):
                 section.find_element_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid').click()
-                time.sleep(6)
+                time.sleep(randint(10,30))
                 #Scroll all the way down
                 last_height = driver.execute_script("return document.body.scrollHeight")
                 while True:
                     #Scroll to bottom
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     # Wait to load page
-                    time.sleep(2)
+                    time.sleep(3)
                     # Calculate new scroll height and compare with last scroll height
                     new_height = driver.execute_script("return document.body.scrollHeight")
                     if new_height == last_height:
@@ -216,7 +242,7 @@ for profile in profile_links:
                         '''
                 print("scrape educations from site")
                 driver.execute_script("window.history.go(-1)")
-                time.sleep(7)
+                time.sleep(randint(10,30))
                 break
             else:
                 #no show more button so just scrape what is already there
@@ -256,14 +282,14 @@ for profile in profile_links:
         if section.find_elements_by_id('skills'):
             if section.find_elements_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid'):
                 section.find_element_by_css_selector('.optional-action-target-wrapper.artdeco-button.artdeco-button--tertiary.artdeco-button--3.artdeco-button--muted.inline-flex.justify-center.full-width.align-items-center.artdeco-button--fluid').click()
-                time.sleep(5)
+                time.sleep(randint(10,30))
                 #Scroll all the way down
                 last_height = driver.execute_script("return document.body.scrollHeight")
                 while True:
                     #Scroll to bottom
                     driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
                     # Wait to load page
-                    time.sleep(2)
+                    time.sleep(3)
                     # Calculate new scroll height and compare with last scroll height
                     new_height = driver.execute_script("return document.body.scrollHeight")
                     if new_height == last_height:
@@ -281,7 +307,7 @@ for profile in profile_links:
 
                 print("scrape skills from site")
                 driver.execute_script("window.history.go(-1)")
-                time.sleep(6)
+                time.sleep(randint(10,30))
                 break
             else:
                 #no show more button so just scrape what is already there
@@ -339,13 +365,13 @@ for profile in profile_links:
     print(about)
     '''
     #join experience_title array into a single string
-    a = ' + '.join(str(x) for x in experience_title)
+    a = ', '.join(str(x) for x in experience_title)
     #join education_school array into a single string
-    b = ' + '.join(str(x) for x in education_school)
+    b = ', '.join(str(x) for x in education_school)
     #join skills array into a single string
-    c = ' + '.join(str(x) for x in skills)
+    c = ', '.join(str(x) for x in skills)
 
-    save_csv_row = [profile, name, title, about, a, b, c]
+    save_csv_row = [profile, name, company, title, about, a, b, c]
 
 
     with open('C:/Users/Admin/source/repos/webcrawler-profile/' + company + '.csv', 'a', encoding='utf-8') as f:
